@@ -3,6 +3,9 @@ from fastapi import FastAPI, HTTPException
 from app.models.session import Session
 from app.services.session_service import create_session, stop_session
 
+from app.models.navigation_event import NavigationEvent
+from app.services.event_service import add_event
+
 
 app = FastAPI(
     title="RabbitHole API",
@@ -31,3 +34,15 @@ def end_session(session_id: str):
         )
 
     return session
+
+@app.post("/sessions/{session_id}/events", response_model=NavigationEvent)
+def record_event(session_id: str, event: NavigationEvent):
+    recorded_event = add_event(session_id, event)
+
+    if recorded_event is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Session does not exist or is not active"
+        )
+
+    return recorded_event
