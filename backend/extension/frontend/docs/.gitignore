@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Environment variables / secrets
+.env
+
+# JavaScript
+node_modules/
+dist/
+build/
+
+# Logs
+*.log
