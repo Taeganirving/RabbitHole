@@ -16,3 +16,14 @@ def create_session() -> Session:
     sessions[session.id] = session
 
     return session
+
+def stop_session(session_id: str) -> Session | None:
+    session = sessions.get(session_id)
+
+    if session is None:
+        return None
+
+    session.active = False
+    session.ended_at = datetime.now(timezone.utc)
+
+    return session
