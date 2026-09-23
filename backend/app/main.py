@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.models.session import Session
-from app.services.session_service import create_session
+from app.services.session_service import create_session, stop_session
 
 
 app = FastAPI(
