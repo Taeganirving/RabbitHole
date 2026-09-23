@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 from app.models.session import Session
 from app.services.session_service import create_session, stop_session
