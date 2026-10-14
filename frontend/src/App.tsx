@@ -26,7 +26,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
-
+import RabbitNode from './components/RabbitNode'
 import AppearanceStudio, {
   backgroundColors,
   defaultAppearance,
@@ -36,43 +36,55 @@ import AppearanceStudio, {
 
 import '@xyflow/react/dist/style.css'
 import './App.css'
-
+const nodeTypes = {
+  rabbit: RabbitNode,
+}
 type ViewMode = 'hybrid' | 'tree' | 'constellation'
+
 
 const initialNodes: Node[] = [
   {
     id: '1',
+    type: 'rabbit',
     position: { x: 0, y: 150 },
     data: {
       label: 'Google Search',
       url: 'https://google.com',
+      nodeStyle: 'balanced',
     },
   },
   {
     id: '2',
+    type: 'rabbit',
     position: { x: 250, y: 150 },
     data: {
       label: 'Artificial Intelligence',
       url: 'https://en.wikipedia.org/wiki/Artificial_intelligence',
+      nodeStyle: 'balanced',
     },
   },
   {
     id: '3',
+    type: 'rabbit',
     position: { x: 500, y: 0 },
     data: {
       label: 'Machine Learning',
       url: 'https://en.wikipedia.org/wiki/Machine_learning',
+      nodeStyle: 'balanced',
     },
   },
   {
     id: '4',
+    type: 'rabbit',
     position: { x: 500, y: 300 },
     data: {
       label: 'Neural Networks',
       url: 'https://en.wikipedia.org/wiki/Neural_network',
+      nodeStyle: 'balanced',
     },
   },
 ]
+
 
 const initialEdges: Edge[] = [
   {
@@ -179,9 +191,39 @@ const appStyle = {
   '--accent': accentColor,
   '--graph-background': graphBackground,
   '--glow-strength': appearance.lighting / 100,
+  '--node-width':
+    appearance.nodeStyle === 'minimal'
+      ? '120px'
+      : appearance.nodeStyle === 'detailed'
+      ? '240px'
+      : '180px',
+  '--node-padding':
+    appearance.nodeStyle === 'minimal'
+      ? '8px'
+      : appearance.nodeStyle === 'detailed'
+      ? '20px'
+      : '12px',
+  '--node-font-size':
+    appearance.nodeStyle === 'minimal'
+      ? '11px'
+      : appearance.nodeStyle === 'detailed'
+      ? '15px'
+      : '13px',
 } as CSSProperties
 
   // Selected node information
+useEffect(() => {
+  setNodes((currentNodes) =>
+    currentNodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        nodeStyle: appearance.nodeStyle,
+      },
+    }))
+  )
+}, [appearance.nodeStyle, setNodes])
+
   const selectedNode = useMemo(
     () => nodes.find((node) => node.id === selectedNodeId),
     [nodes, selectedNodeId]
@@ -355,7 +397,8 @@ const appStyle = {
 
           {/* Graph canvas */}
           <div className="graph-area">
-            <ReactFlow
+           <ReactFlow
+              nodeTypes={nodeTypes}
               nodes={nodes}
               edges={edges}
               onNodesChange={onNodesChange}

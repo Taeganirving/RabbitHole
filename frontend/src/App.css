@@ -679,3 +679,149 @@ button {
   border-radius: 10px;
   margin-top: 8px;
 }
+
+/* Node style selector */
+
+.node-style-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.node-style-button {
+  padding: 10px 5px;
+  border: 1px solid #263449;
+  border-radius: 8px;
+  background: #111c2e;
+  color: #cbd5e1;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.node-style-button:hover {
+  border-color: var(--accent);
+}
+
+.node-style-button.selected {
+  border-color: var(--accent);
+  background: color-mix(
+    in srgb,
+    var(--accent) 12%,
+    #111c2e
+  );
+  color: #fff;
+}
+
+.node-style-description {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+/* ========================================
+   DYNAMIC NODE STYLES
+   ======================================== */
+
+.graph-area .react-flow__node-default {
+  width: var(--node-width);
+  padding: var(--node-padding);
+  font-size: var(--node-font-size);
+  line-height: 1.5;
+  text-align: center;
+  transition:
+    width 0.3s ease,
+    padding 0.3s ease,
+    font-size 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Node hover effects */
+
+.graph-area .react-flow__node-default:hover {
+  box-shadow:
+    0 0 calc(45px * var(--glow-strength))
+    color-mix(in srgb, var(--accent) 75%, transparent);
+  transform: translateY(-2px);
+}
+
+/* Selected node */
+
+.graph-area .react-flow__node-default.selected {
+  border-width: 2px;
+  box-shadow:
+    0 0 calc(50px * var(--glow-strength))
+    color-mix(in srgb, var(--accent) 85%, transparent);
+}
+
+/* Custom RabbitHole graph nodes */
+
+.rabbit-node {
+  position: relative;
+  width: var(--node-width, 180px);
+  padding: var(--node-padding, 12px);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: #101827;
+  color: #e2e8f0;
+  box-shadow: 0 0 calc(30px * var(--glow-strength))
+    color-mix(in srgb, var(--accent) 45%, transparent);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.rabbit-node--selected {
+  border-width: 2px;
+  box-shadow: 0 0 calc(45px * var(--glow-strength))
+    color-mix(in srgb, var(--accent) 75%, transparent);
+}
+
+.rabbit-node__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rabbit-node__header svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.rabbit-node__title {
+  font-size: var(--node-font-size, 13px);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.rabbit-node__domain {
+  margin-top: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.rabbit-node__details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #263449;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.rabbit-node__details a {
+  color: var(--accent);
+}
+
+.react-flow__node-rabbit {
+  border: none;
+  background: transparent;
+}
+
+.rabbit-node .react-flow__handle {
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  border: 1px solid #101827;
+}

@@ -26,9 +26,11 @@ export interface AppearanceSettings {
   gradientStart: string
   gradientEnd: string
   gradientAngle: number
+  nodeStyle: 'minimal' | 'balanced' | 'detailed'
 }
 
 export const defaultAppearance: AppearanceSettings = {
+  nodeStyle: 'balanced',  
   background: 'void',
   palette: 'electric',
   lighting: 65,
@@ -306,6 +308,42 @@ export default function AppearanceStudio({
       />
     </div>
   )}
+</div>
+
+{/* Node style customization */}
+<div className="appearance-section">
+  <h3>NODE STYLE</h3>
+
+  <div className="node-style-options">
+    {(
+      [
+        ['minimal', 'Minimal'],
+        ['balanced', 'Balanced'],
+        ['detailed', 'Detailed'],
+      ] as const
+    ).map(([value, label]) => (
+      <button
+        type="button"
+        key={value}
+        className={
+          settings.nodeStyle === value
+            ? 'node-style-button selected'
+            : 'node-style-button'
+        }
+        onClick={() => update({ nodeStyle: value })}
+      >
+        {label}
+      </button>
+    ))}
+  </div>
+
+  <p className="node-style-description">
+    {settings.nodeStyle === 'minimal'
+      ? 'Compact nodes with minimal information.'
+      : settings.nodeStyle === 'balanced'
+      ? 'Medium-sized nodes with subtle glowing effects.'
+      : 'Larger nodes with more webpage information.'}
+  </p>
 </div>
 
       {/* Ambient lighting */}
