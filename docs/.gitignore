@@ -1,5 +1,10 @@
+
 # macOS
 .DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
 
 # Python
 __pycache__/
@@ -9,6 +14,7 @@ __pycache__/
 
 # Environment variables / secrets
 .env
+.env.*
 
 # JavaScript
 node_modules/
@@ -17,3 +23,14 @@ build/
 
 # Logs
 *.log
+
+# SQLite Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# VS Code
+.vscode/
