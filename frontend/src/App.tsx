@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useRabbitHoleData } from './hooks/useRabbitHoleData'
 import { buildNavigationGraph } from './utils/buildNavigationGraph'
+import { deleteSession } from './utils/deleteSession'
 
 
 import {
@@ -24,8 +25,8 @@ import {
 import {
   Orbit,
   Library,
-  Network,
   Palette,
+  Network,
   Search,
   Settings2,
   ExternalLink,
@@ -89,6 +90,8 @@ const [edges, setEdges, onEdgesChange] =
 
   // Interface state
   const [mode, setMode] = useState<ViewMode>('hybrid')
+  const [activeView, setActiveView] =
+  useState<'library' | 'explorer'>('explorer')
   const [selectedSessionId, setSelectedSessionId] =
   useState<string | null>(null)
 
@@ -300,52 +303,68 @@ const changeMode = (nextMode: ViewMode) => {
               <div className="sidebar-section">
                 <div className="section-label">
                   WORKSPACE
+                 
+<button
+  className={
+    activeView === 'library'
+      ? 'nav-item active'
+      : 'nav-item'
+  }
+  onClick={() => setActiveView('library')}
+>
+  <Library size={18} />
+  Library
+</button>
+
+<button
+  className={
+    activeView === 'explorer'
+      ? 'nav-item active'
+      : 'nav-item'
+  }
+  onClick={() => setActiveView('explorer')}
+>
+  <Network size={18} />
+  Explorer
+</button>
+
+<button
+  className="nav-item"
+  onClick={() => setAppearanceOpen(true)}
+>
+  <Palette size={18} />
+  Appearance Studio
+</button>
+ 
                 </div>
 
-                
-              <button className="nav-item">
-               <Library size={18} />
-               Library
-              </button>
+              
 
+<div className="sidebar-section">
+  <div className="section-label">
+    RABBITHOLES
+  </div>
 
-                <button className="nav-item active">
-                  <Network size={18} />
-                  Explorer
-                </button>
+  {sessions.map(item => (
+    <button
+      key={item.id}
+      className={
+        selectedSession?.id === item.id
+          ? 'nav-item active'
+          : 'nav-item'
+      }
+      onClick={() => {
+        setSelectedSessionId(item.id)
+        setSelectedNodeId(null)
+        setActiveView('explorer')
+      }}
+    >
+      <Search size={18} />
+      {item.title}
+    </button>
+  ))}
+</div>
 
-                <button
-                  className="nav-item"
-                  onClick={() => setAppearanceOpen(true)}
-                >
-                  <Palette size={18} />
-                  Appearance Studio
-                </button>
-              </div>
-
-              <div className="sidebar-section">
-                <div className="section-label">
-                  RABBITHOLES
-                </div>
-
-                
-{sessions.map(item => (
-  <button
-    key={item.id}
-    className={
-      selectedSession?.id === item.id
-        ? 'nav-item active'
-        : 'nav-item'
-    }
-    onClick={() => {
-      setSelectedSessionId(item.id)
-      setSelectedNodeId(null)
-    }}
-  >
-    <Search size={18} />
-    {item.title}
-  </button>
-))}
 
               </div>
 
@@ -358,6 +377,112 @@ const changeMode = (nextMode: ViewMode) => {
 
      
 {/* Main Explorer */}
+{activeView === 'library' ? (
+  <main className="main-content">
+    <div className="explorer-header">
+      <div>
+        <div className="breadcrumb">YOUR RESEARCH</div>
+        <h1>RabbitHole Library</h1>
+        <p>All your saved browsing sessions in one place.</p>
+      </div>
+    </div>
+
+    <div style={{ padding: '28px', overflowY: 'auto' }}>
+      <h2 style={{ marginBottom: '20px' }}>
+        Saved RabbitHoles ({sessions.length})
+      </h2>
+
+      {sessions.length === 0 ? (
+        <p>No sessions yet. Start a RabbitHole to begin.</p>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns:
+              'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '16px',
+          }}
+        >
+          {sessions.map(item => {
+            const pageCount = new Set(
+              events
+                .filter(event => event.sessionId === item.id)
+                .map(event => event.url)
+            ).size
+
+            return (
+              <div
+                key={item.id}
+                style={{
+                  background: '#101b2d',
+                  border: '1px solid #25384e',
+                  borderRadius: '12px',
+                  padding: '20px',
+                }}
+              >
+                <h3>{item.title}</h3>
+
+                <p>
+                  {new Date(item.startedAt).toLocaleDateString()}
+                </p>
+
+                <p>{pageCount} unique webpages</p>
+
+                <button
+                  className="nav-item active"
+                  onClick={() => {
+                    setSelectedSessionId(item.id)
+                    setSelectedNodeId(null)
+                    setActiveView('explorer')
+                  }}
+                >
+                  <Network size={18} />
+                  
+                  Open Explorer
+                </button>
+
+                <button
+                  className="nav-item"
+                  style={{
+                    marginTop: '10px',
+                    color: '#f87171',
+                  }}
+                  onClick={async () => {
+                    if (
+                      !window.confirm(
+                        `Delete "${item.title}" and its browsing history?`
+                      )
+                    ) {
+                      return
+                    }
+
+                    try {
+                      await deleteSession(item.id)
+
+                      if (selectedSessionId === item.id) {
+                        setSelectedSessionId(null)
+                        setSelectedNodeId(null)
+                      }
+                    } catch (error) {
+                      window.alert(
+                        error instanceof Error
+                          ? error.message
+                          : 'Could not delete session.'
+                      )
+                    }
+                  }}
+                >
+                  Delete RabbitHole
+                </button>
+              </div>
+            )
+          })}
+
+        </div>
+      )}
+    </div>
+  </main>
+) : (
 <main className="main-content">
   <div className="explorer-header">
     <div>
@@ -365,7 +490,7 @@ const changeMode = (nextMode: ViewMode) => {
         LIBRARY / COMPUTER SCIENCE
       </div>
 
-      <h1>{session?.title || 'RabbitHole Explorer'}</h1>
+      <h1>{selectedSession?.title || 'RabbitHole Explorer'}</h1>
 
       <p>
         Explore the connections between your discoveries.
@@ -374,7 +499,7 @@ const changeMode = (nextMode: ViewMode) => {
 
 
             <div className="session-badge">
-              {session?.active ? 'ACTIVE SESSION' : 'SAVED SESSION'}
+              {selectedSession?.active ? 'ACTIVE SESSION' : 'SAVED SESSION'}
             </div>
           </div>
 
@@ -481,8 +606,9 @@ const changeMode = (nextMode: ViewMode) => {
             )}
           </div>
         </main>
-
+        )}  
         {/* Node inspector */}
+        {activeView === 'explorer' && (
         <aside className="inspector">
           <div className="inspector-heading">
             NODE INSPECTOR
@@ -537,6 +663,8 @@ const changeMode = (nextMode: ViewMode) => {
             </div>
           )}
         </aside>
+        )}
+
 
         {/* Appearance Studio panel */}
         {appearanceOpen && (
