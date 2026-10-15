@@ -1,6 +1,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { useRabbitHoleData } from './hooks/useRabbitHoleData'
 
 import {
   ReactFlow,
@@ -132,6 +133,13 @@ const layouts: Record<
 }
 
 function App() {
+  const { session, events, connected } = useRabbitHoleData();
+
+useEffect(() => {
+  console.log("RabbitHole connection:", connected);
+  console.log("Current session:", session);
+  console.log("Recorded events:", events);
+}, [connected, session, events]);
   // Graph state
   const [nodes, setNodes, onNodesChange] =
     useNodesState(initialNodes)

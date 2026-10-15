@@ -1,0 +1,77 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 340px;
+  background: #080b14;
+  color: #f5f7ff;
+  font-family: Arial, sans-serif;
+}
+
+.popup {
+  padding: 24px;
+}
+
+.brand {
+  color: #32e6ff;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 3px;
+}
+
+h1 {
+  margin: 24px 0 10px;
+  font-size: 25px;
+}
+
+p {
+  color: #9ba8c2;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+label {
+  display: block;
+  margin-top: 24px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #27344c;
+  border-radius: 8px;
+  background: #101726;
+  color: white;
+  outline: none;
+}
+
+input:focus {
+  border-color: #32e6ff;
+}
+
+button {
+  width: 100%;
+  margin-top: 16px;
+  padding: 13px;
+  border: none;
+  border-radius: 8px;
+  background: #32e6ff;
+  color: #071018;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #82f1ff;
+}
+
+#status {
+  margin-top: 20px;
+  text-align: center;
+  color: #9ba8c2;
+  font-size: 12px;
+}
