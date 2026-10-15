@@ -4,7 +4,8 @@ import type { CSSProperties } from 'react'
 import { useRabbitHoleData } from './hooks/useRabbitHoleData'
 import { buildNavigationGraph } from './utils/buildNavigationGraph'
 import { deleteSession } from './utils/deleteSession'
-
+import { exportSession } from './utils/exportSession'
+import { importSession } from './utils/importSession'
 
 import {
   ReactFlow,
@@ -49,7 +50,16 @@ const nodeTypes = {
 type ViewMode = 'hybrid' | 'tree' | 'constellation'
 
 
-function GraphAutoFit({ nodeCount }: { nodeCount: number }) {
+
+function GraphAutoFit({
+  nodeCount,
+  mode,
+  sessionId,
+}: {
+  nodeCount: number
+  mode: ViewMode
+  sessionId: string | null
+}) {
   const { fitView } = useReactFlow()
 
   useEffect(() => {
@@ -57,14 +67,14 @@ function GraphAutoFit({ nodeCount }: { nodeCount: number }) {
 
     const frame = requestAnimationFrame(() => {
       void fitView({
-        padding: 0.3,
+        padding: 0.25,
         maxZoom: 1.2,
-        duration: 500,
+        duration: 350,
       })
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [nodeCount, fitView])
+  }, [nodeCount, mode, sessionId, fitView])
 
   return null
 }
@@ -136,13 +146,52 @@ useEffect(() => {
   ? events.filter((event) => event.sessionId === selectedSession.id)
   : []
 
-  const graph = buildNavigationGraph(
-    sessionEvents,
-    appearance.nodeStyle
-  )
+ 
+const graph = buildNavigationGraph(
+  sessionEvents,
+  appearance.nodeStyle
+)
 
-  setNodes(graph.nodes)
-  setEdges(graph.edges)
+const count = graph.nodes.length
+
+const layoutNodes = graph.nodes.map((node, index) => {
+  // Tree uses the navigation-based positions.
+  if (mode === 'tree') {
+    return node
+  }
+
+  // Constellation arranges nodes in a circle.
+  if (mode === 'constellation') {
+    const radius = Math.max(240, count * 35)
+    const angle =
+      (index / Math.max(count, 1)) * Math.PI * 2 - Math.PI / 2
+
+    return {
+      ...node,
+      position: {
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+      },
+    }
+  }
+
+  // Hybrid uses staggered rows.
+  const columns = Math.max(2, Math.ceil(Math.sqrt(count)))
+  const row = Math.floor(index / columns)
+  const column = index % columns
+
+  return {
+    ...node,
+    position: {
+      x: column * 280 + (row % 2) * 110,
+      y: row * 210,
+    },
+  }
+})
+
+setNodes(layoutNodes)
+setEdges(graph.edges)
+
 }, [
   connected,
   selectedSession?.id,
@@ -212,38 +261,73 @@ useEffect(() => {
   )
 
   // Change graph visualization mode
+
 const changeMode = (nextMode: ViewMode) => {
   setMode(nextMode)
 
   setNodes((currentNodes) => {
     const count = currentNodes.length
+    if (count === 0) return currentNodes
+
+    // Tree: preserve the navigation-based layout.
+    if (nextMode === 'tree') {
+      const sessionEvents = selectedSession
+        ? events.filter(
+            event => event.sessionId === selectedSession.id
+          )
+        : []
+
+      const graph = buildNavigationGraph(
+        sessionEvents,
+        appearance.nodeStyle
+      )
+
+      const positions = new Map(
+        graph.nodes.map(node => [node.id, node.position])
+      )
+
+      return currentNodes.map(node => ({
+        ...node,
+        position: positions.get(node.id) ?? node.position,
+      }))
+    }
+
+    // Constellation: arrange webpages around a circle.
+    if (nextMode === 'constellation') {
+      const radius = Math.max(240, count * 35)
+
+      return currentNodes.map((node, index) => {
+        const angle =
+          (index / count) * Math.PI * 2 - Math.PI / 2
+
+        return {
+          ...node,
+          position: {
+            x: Math.cos(angle) * radius,
+            y: Math.sin(angle) * radius,
+          },
+        }
+      })
+    }
+
+    // Hybrid: compact, staggered arrangement.
+    const columns = Math.max(2, Math.ceil(Math.sqrt(count)))
 
     return currentNodes.map((node, index) => {
-      let x = 0
-      let y = 0
-
-      if (nextMode === 'tree') {
-        const columns = Math.max(1, Math.ceil(Math.sqrt(count)))
-        x = (index % columns) * 260
-        y = Math.floor(index / columns) * 190
-      } else if (nextMode === 'constellation') {
-        const angle = (index / Math.max(count, 1)) * Math.PI * 2
-        const radius = Math.max(180, count * 28)
-
-        x = Math.cos(angle) * radius
-        y = Math.sin(angle) * radius
-      } else {
-        x = (index % 4) * 260
-        y = Math.floor(index / 4) * 190
-      }
+      const row = Math.floor(index / columns)
+      const column = index % columns
 
       return {
         ...node,
-        position: { x, y },
+        position: {
+          x: column * 280 + (row % 2) * 110,
+          y: row * 210,
+        },
       }
     })
   })
 }
+
 
   // Connect graph nodes
   const onConnect = useCallback(
@@ -392,6 +476,42 @@ const changeMode = (nextMode: ViewMode) => {
         Saved RabbitHoles ({sessions.length})
       </h2>
 
+<label
+  className="nav-item"
+  style={{
+    display: 'inline-flex',
+    alignItems: 'center',
+    width: 'fit-content',
+    marginBottom: '20px',
+    cursor: 'pointer',
+  }}
+>
+  <input
+    type="file"
+    accept=".json,application/json"
+    style={{ display: 'none' }}
+    onChange={async event => {
+      const file = event.currentTarget.files?.[0]
+      if (!file) return
+
+      try {
+        const title = await importSession(file)
+        window.alert(`Imported "${title}" successfully.`)
+      } catch (error) {
+        window.alert(
+          error instanceof Error
+            ? error.message
+            : 'Could not import RabbitHole.'
+        )
+      } finally {
+        event.currentTarget.value = ''
+      }
+    }}
+  />
+  Import JSON
+</label>
+
+
       {sessions.length === 0 ? (
         <p>No sessions yet. Start a RabbitHole to begin.</p>
       ) : (
@@ -440,6 +560,30 @@ const changeMode = (nextMode: ViewMode) => {
                   
                   Open Explorer
                 </button>
+
+                  <button
+                    className="nav-item"
+                    style={{ marginTop: '10px' }}
+                    onClick={() => {
+                      const confirmed = window.confirm(
+                        `Privacy Notice\n\n` +
+                        `Your RabbitHole export contains the URLs, page titles, ` +
+                        `and timestamps recorded during this session.\n\n` +
+                        `Some URLs may contain personal or sensitive information.\n\n` +
+                        `Review the JSON file before sharing it with anyone.\n\n` +
+                        `Do you want to export "${item.title}"?`
+                      )
+
+                      if (confirmed) {
+                        exportSession(item, events)
+                      }
+                    }}
+                  >
+                    <ExternalLink size={16} />
+                    Export JSON
+                  </button>
+
+
 
                 <button
                   className="nav-item"
@@ -559,15 +703,21 @@ const changeMode = (nextMode: ViewMode) => {
   fitView
   fitViewOptions={{ padding: 0.3, maxZoom: 1.2 }}
 >
-  <GraphAutoFit nodeCount={nodes.length} />
+ <GraphAutoFit
+  nodeCount={nodes.length}
+  mode={mode}
+  sessionId={selectedSession?.id ?? null}
+/>
+  
 
-  {appearance.showGrid && (
-    <Background
-      color={accentColor}
-      gap={24}
-      size={1}
-    />
-  )}
+{appearance.showGrid && (
+  <Background
+    color={accentColor}
+    gap={24}
+    size={1}
+  />
+)}
+
 
   <Controls />
  

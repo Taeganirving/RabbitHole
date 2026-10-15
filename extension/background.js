@@ -105,29 +105,3 @@ api.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 api.tabs.onRemoved.addListener(tabId => {
   lastPageByTab.delete(tabId);
 });
-console.log("RabbitHole API check:", typeof api.tabs);
-
-
-api.tabs.query({}).then((tabs) => {
-  console.log(
-    "RabbitHole visible tabs:",
-    tabs.map((tab) => ({
-      id: tab.id,
-      url: tab.url
-    }))
-  );
-}).catch(console.error);
-
-api.scripting.executeScript({
-  target: { tabId: 24 },
-  func: () => {
-    document.documentElement.setAttribute(
-      "data-rabbithole-bridge",
-      "manual-test"
-    );
-  }
-}).then(() => {
-  console.log("Manual injection succeeded!");
-}).catch((error) => {
-  console.error("Manual injection failed:", error);
-});
