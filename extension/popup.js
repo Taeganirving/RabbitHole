@@ -30,36 +30,76 @@ async function updatePopup() {
 }
 
 startButton.addEventListener("click", async () => {
-  const { currentSession } =
-    await api.storage.local.get("currentSession");
+  startButton.disabled = true;
 
-  if (currentSession?.active) {
-    await api.storage.local.set({
-      currentSession: {
+  try {
+    const {
+      currentSession,
+      sessions = []
+    } = await api.storage.local.get([
+      "currentSession",
+      "sessions"
+    ]);
+
+    // Preserve an older session that was created before
+    // we introduced session history.
+    const savedSessions = [...sessions];
+
+    if (
+      currentSession &&
+      !savedSessions.some(session => session.id === currentSession.id)
+    ) {
+      savedSessions.push(currentSession);
+    }
+
+    if (currentSession?.active) {
+      // Stop recording and preserve the completed session.
+      const stoppedSession = {
         ...currentSession,
         active: false,
         stoppedAt: new Date().toISOString()
+      };
+
+      const updatedSessions = savedSessions.map(session =>
+        session.id === stoppedSession.id
+          ? stoppedSession
+          : session
+      );
+
+      await api.storage.local.set({
+        currentSession: stoppedSession,
+        sessions: updatedSessions
+      });
+
+    } else {
+      const title = sessionInput.value.trim();
+
+      if (!title) {
+        status.textContent = "Please enter a session name.";
+        return;
       }
-    });
-  } else {
-    const title = sessionInput.value.trim();
 
-    if (!title) {
-      status.textContent = "Please enter a session name.";
-      return;
-    }
-
-    await api.storage.local.set({
-      currentSession: {
+      const newSession = {
         id: crypto.randomUUID(),
         title,
         startedAt: new Date().toISOString(),
         active: true
-      }
-    });
-  }
+      };
 
-  await updatePopup();
+      await api.storage.local.set({
+        currentSession: newSession,
+        sessions: [...savedSessions, newSession]
+      });
+    }
+
+    await updatePopup();
+
+  } catch (error) {
+    console.error("RabbitHole session error:", error);
+    status.textContent = "Could not update session.";
+  } finally {
+    startButton.disabled = false;
+  }
 });
 
 updatePopup();

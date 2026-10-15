@@ -69,14 +69,17 @@ function GraphAutoFit({ nodeCount }: { nodeCount: number }) {
 }
 
 
-function App() {
-  const { session, events, connected } = useRabbitHoleData();
 
-useEffect(() => {
-  console.log("RabbitHole connection:", connected);
-  console.log("Current session:", session);
-  console.log("Recorded events:", events);
-}, [connected, session, events]);
+function App() {
+  const { session, sessions, events, connected } = useRabbitHoleData()
+
+  useEffect(() => {
+    console.log("RabbitHole connection:", connected)
+    console.log("Current session:", session)
+    console.log("Recorded events:", events)
+    console.log("Saved RabbitHole sessions:", sessions)
+  }, [connected, session, events, sessions])
+
   // Graph state
 const [nodes, setNodes, onNodesChange] =
   useNodesState<Node>([])
@@ -86,6 +89,12 @@ const [edges, setEdges, onEdgesChange] =
 
   // Interface state
   const [mode, setMode] = useState<ViewMode>('hybrid')
+  const [selectedSessionId, setSelectedSessionId] =
+  useState<string | null>(null)
+
+const selectedSession =
+  sessions.find(item => item.id === selectedSessionId) ??
+  session
 
   const [selectedNodeId, setSelectedNodeId] =
     useState<string | null>(null)
@@ -120,9 +129,9 @@ const [edges, setEdges, onEdgesChange] =
 useEffect(() => {
   if (!connected) return
 
-  const sessionEvents = session
-    ? events.filter((event) => event.sessionId === session.id)
-    : []
+  const sessionEvents = selectedSession
+  ? events.filter((event) => event.sessionId === selectedSession.id)
+  : []
 
   const graph = buildNavigationGraph(
     sessionEvents,
@@ -133,7 +142,7 @@ useEffect(() => {
   setEdges(graph.edges)
 }, [
   connected,
-  session?.id,
+  selectedSession?.id,
   events,
   appearance.nodeStyle,
   setNodes,
@@ -319,10 +328,25 @@ const changeMode = (nextMode: ViewMode) => {
                   RABBITHOLES
                 </div>
 
-                <button className="nav-item">
-                <Search size={18} />
-                {session?.title || 'No session selected'}
-                </button>
+                
+{sessions.map(item => (
+  <button
+    key={item.id}
+    className={
+      selectedSession?.id === item.id
+        ? 'nav-item active'
+        : 'nav-item'
+    }
+    onClick={() => {
+      setSelectedSessionId(item.id)
+      setSelectedNodeId(null)
+    }}
+  >
+    <Search size={18} />
+    {item.title}
+  </button>
+))}
+
               </div>
 
               <div className="sidebar-footer">

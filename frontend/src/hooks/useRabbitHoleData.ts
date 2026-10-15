@@ -21,6 +21,7 @@ export interface RabbitHoleSession {
 
 interface StoredData {
   currentSession?: RabbitHoleSession
+  sessions?: RabbitHoleSession[]
   navigationEvents?: NavigationEvent[]
 }
 
@@ -42,12 +43,11 @@ interface ExtensionApi {
 
 export function useRabbitHoleData() {
   const [session, setSession] = useState<RabbitHoleSession | null>(null)
+  const [sessions, setSessions] = useState<RabbitHoleSession[]>([])
   const [events, setEvents] = useState<NavigationEvent[]>([])
   const [connected, setConnected] = useState(false)
 
   useEffect(() => {
-    console.log('RabbitHole storage hook is running')
-
     const extension = (
       globalThis as typeof globalThis & {
         browser?: ExtensionApi
@@ -65,16 +65,37 @@ export function useRabbitHoleData() {
       try {
         const data = await extension!.storage.local.get([
           'currentSession',
+          'sessions',
           'navigationEvents'
         ])
 
         if (!active) return
 
-        setSession(data.currentSession ?? null)
+        const currentSession = data.currentSession ?? null
+        const savedSessions = data.sessions ?? []
+
+        // Include an older session if it has not been
+        // added to the session history yet.
+        const allSessions = [...savedSessions]
+
+        if (
+          currentSession &&
+          !allSessions.some(item => item.id === currentSession.id)
+        ) {
+          allSessions.push(currentSession)
+        }
+
+        // Show newest sessions first.
+        allSessions.sort(
+          (a, b) =>
+            new Date(b.startedAt).getTime() -
+            new Date(a.startedAt).getTime()
+        )
+
+        setSession(currentSession)
+        setSessions(allSessions)
         setEvents(data.navigationEvents ?? [])
         setConnected(true)
-
-        console.log('RabbitHole storage connected:', data)
       } catch (error) {
         console.error('RabbitHole storage error:', error)
         if (active) setConnected(false)
@@ -100,5 +121,5 @@ export function useRabbitHoleData() {
     }
   }, [])
 
-  return { session, events, connected }
+  return { session, sessions, events, connected }
 }
