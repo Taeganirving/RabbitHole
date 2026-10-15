@@ -2,19 +2,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useRabbitHoleData } from './hooks/useRabbitHoleData'
+import { buildNavigationGraph } from './utils/buildNavigationGraph'
+
 
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
   addEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Connection,
   type Node,
   type Edge,
 } from '@xyflow/react'
+
 
 import {
   Orbit,
@@ -43,94 +48,26 @@ const nodeTypes = {
 type ViewMode = 'hybrid' | 'tree' | 'constellation'
 
 
-const initialNodes: Node[] = [
-  {
-    id: '1',
-    type: 'rabbit',
-    position: { x: 0, y: 150 },
-    data: {
-      label: 'Google Search',
-      url: 'https://google.com',
-      nodeStyle: 'balanced',
-    },
-  },
-  {
-    id: '2',
-    type: 'rabbit',
-    position: { x: 250, y: 150 },
-    data: {
-      label: 'Artificial Intelligence',
-      url: 'https://en.wikipedia.org/wiki/Artificial_intelligence',
-      nodeStyle: 'balanced',
-    },
-  },
-  {
-    id: '3',
-    type: 'rabbit',
-    position: { x: 500, y: 0 },
-    data: {
-      label: 'Machine Learning',
-      url: 'https://en.wikipedia.org/wiki/Machine_learning',
-      nodeStyle: 'balanced',
-    },
-  },
-  {
-    id: '4',
-    type: 'rabbit',
-    position: { x: 500, y: 300 },
-    data: {
-      label: 'Neural Networks',
-      url: 'https://en.wikipedia.org/wiki/Neural_network',
-      nodeStyle: 'balanced',
-    },
-  },
-]
+function GraphAutoFit({ nodeCount }: { nodeCount: number }) {
+  const { fitView } = useReactFlow()
 
+  useEffect(() => {
+    if (nodeCount === 0) return
 
-const initialEdges: Edge[] = [
-  {
-    id: 'e1-2',
-    source: '1',
-    target: '2',
-    animated: true,
-  },
-  {
-    id: 'e2-3',
-    source: '2',
-    target: '3',
-    animated: true,
-  },
-  {
-    id: 'e2-4',
-    source: '2',
-    target: '4',
-    animated: true,
-  },
-]
+    const frame = requestAnimationFrame(() => {
+      void fitView({
+        padding: 0.3,
+        maxZoom: 1.2,
+        duration: 500,
+      })
+    })
 
-const layouts: Record<
-  ViewMode,
-  Record<string, { x: number; y: number }>
-> = {
-  hybrid: {
-    '1': { x: 0, y: 150 },
-    '2': { x: 250, y: 150 },
-    '3': { x: 500, y: 0 },
-    '4': { x: 500, y: 300 },
-  },
-  tree: {
-    '1': { x: 250, y: 0 },
-    '2': { x: 250, y: 150 },
-    '3': { x: 100, y: 300 },
-    '4': { x: 400, y: 300 },
-  },
-  constellation: {
-    '1': { x: 80, y: 60 },
-    '2': { x: 320, y: 200 },
-    '3': { x: 560, y: 30 },
-    '4': { x: 150, y: 380 },
-  },
+    return () => cancelAnimationFrame(frame)
+  }, [nodeCount, fitView])
+
+  return null
 }
+
 
 function App() {
   const { session, events, connected } = useRabbitHoleData();
@@ -141,11 +78,11 @@ useEffect(() => {
   console.log("Recorded events:", events);
 }, [connected, session, events]);
   // Graph state
-  const [nodes, setNodes, onNodesChange] =
-    useNodesState(initialNodes)
+const [nodes, setNodes, onNodesChange] =
+  useNodesState<Node>([])
 
-  const [edges, setEdges, onEdgesChange] =
-    useEdgesState(initialEdges)
+const [edges, setEdges, onEdgesChange] =
+  useEdgesState<Edge>([])
 
   // Interface state
   const [mode, setMode] = useState<ViewMode>('hybrid')
@@ -178,6 +115,31 @@ useEffect(() => {
       JSON.stringify(appearance)
     )
   }, [appearance])
+
+  // Convert recorded browsing events into graph nodes and edges
+useEffect(() => {
+  if (!connected) return
+
+  const sessionEvents = session
+    ? events.filter((event) => event.sessionId === session.id)
+    : []
+
+  const graph = buildNavigationGraph(
+    sessionEvents,
+    appearance.nodeStyle
+  )
+
+  setNodes(graph.nodes)
+  setEdges(graph.edges)
+}, [
+  connected,
+  session?.id,
+  events,
+  appearance.nodeStyle,
+  setNodes,
+  setEdges,
+])
+
 
   // Active appearance colors
   const accentColor =
@@ -238,16 +200,38 @@ useEffect(() => {
   )
 
   // Change graph visualization mode
-  const changeMode = (nextMode: ViewMode) => {
-    setMode(nextMode)
+const changeMode = (nextMode: ViewMode) => {
+  setMode(nextMode)
 
-    setNodes((currentNodes) =>
-      currentNodes.map((node) => ({
+  setNodes((currentNodes) => {
+    const count = currentNodes.length
+
+    return currentNodes.map((node, index) => {
+      let x = 0
+      let y = 0
+
+      if (nextMode === 'tree') {
+        const columns = Math.max(1, Math.ceil(Math.sqrt(count)))
+        x = (index % columns) * 260
+        y = Math.floor(index / columns) * 190
+      } else if (nextMode === 'constellation') {
+        const angle = (index / Math.max(count, 1)) * Math.PI * 2
+        const radius = Math.max(180, count * 28)
+
+        x = Math.cos(angle) * radius
+        y = Math.sin(angle) * radius
+      } else {
+        x = (index % 4) * 260
+        y = Math.floor(index / 4) * 190
+      }
+
+      return {
         ...node,
-        position: layouts[nextMode][node.id] ?? node.position,
-      }))
-    )
-  }
+        position: { x, y },
+      }
+    })
+  })
+}
 
   // Connect graph nodes
   const onConnect = useCallback(
@@ -309,10 +293,12 @@ useEffect(() => {
                   WORKSPACE
                 </div>
 
-                <button className="nav-item">
-                  <Library size={18} />
-                  Library
-                </button>
+                
+              <button className="nav-item">
+               <Library size={18} />
+               Library
+              </button>
+
 
                 <button className="nav-item active">
                   <Network size={18} />
@@ -334,8 +320,8 @@ useEffect(() => {
                 </div>
 
                 <button className="nav-item">
-                  <Search size={18} />
-                  Exploring Artificial Intelligence
+                <Search size={18} />
+                {session?.title || 'No session selected'}
                 </button>
               </div>
 
@@ -346,23 +332,25 @@ useEffect(() => {
           )}
         </aside>
 
-        {/* Main Explorer */}
-        <main className="main-content">
-          <div className="explorer-header">
-            <div>
-              <div className="breadcrumb">
-                LIBRARY / COMPUTER SCIENCE
-              </div>
+     
+{/* Main Explorer */}
+<main className="main-content">
+  <div className="explorer-header">
+    <div>
+      <div className="breadcrumb">
+        LIBRARY / COMPUTER SCIENCE
+      </div>
 
-              <h1>Exploring Artificial Intelligence</h1>
+      <h1>{session?.title || 'RabbitHole Explorer'}</h1>
 
-              <p>
-                Explore the connections between your discoveries.
-              </p>
-            </div>
+      <p>
+        Explore the connections between your discoveries.
+      </p>
+    </div>
+
 
             <div className="session-badge">
-              DEMO SESSION
+              {session?.active ? 'ACTIVE SESSION' : 'SAVED SESSION'}
             </div>
           </div>
 
@@ -405,33 +393,53 @@ useEffect(() => {
 
           {/* Graph canvas */}
           <div className="graph-area">
-           <ReactFlow
-              nodeTypes={nodeTypes}
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onNodeClick={(_, node) =>
-                setSelectedNodeId(node.id)
-              }
-              onPaneClick={() =>
-                setSelectedNodeId(null)
-              }
-              fitView
-            >
-              {appearance.showGrid && (
-                <Background
-                  color={accentColor}
-                  gap={24}
-                  size={1}
-                />
-              )}
+           
+<ReactFlow
+  nodeTypes={nodeTypes}
+  nodes={nodes}
+  edges={edges}
+  onNodesChange={onNodesChange}
+  onEdgesChange={onEdgesChange}
+  onConnect={onConnect}
+  onNodeClick={(_, node) =>
+    setSelectedNodeId(node.id)
+  }
+  onPaneClick={() =>
+    setSelectedNodeId(null)
+  }
+  fitView
+  fitViewOptions={{ padding: 0.3, maxZoom: 1.2 }}
+>
+  <GraphAutoFit nodeCount={nodes.length} />
 
-              <Controls />
+  {appearance.showGrid && (
+    <Background
+      color={accentColor}
+      gap={24}
+      size={1}
+    />
+  )}
 
-              <MiniMap />
-            </ReactFlow>
+  <Controls />
+ 
+<MiniMap
+  nodeColor={accentColor}
+  nodeStrokeColor={accentColor}
+  nodeStrokeWidth={1}
+  maskColor="rgba(5, 10, 20, 0.65)"
+  bgColor="#0b1220"
+  pannable
+  zoomable
+  style={{
+    width: 140,
+    height: 90,
+    border: '1px solid rgba(100, 150, 200, 0.2)',
+    borderRadius: 8,
+  }}
+/>
+
+</ReactFlow>
+
 
             {/* Ambient particles */}
             {appearance.showParticles && (
@@ -519,4 +527,14 @@ useEffect(() => {
   )
 }
 
-export default App
+
+function RabbitHoleApp() {
+  return (
+    <ReactFlowProvider>
+      <App />
+    </ReactFlowProvider>
+  )
+}
+
+export default RabbitHoleApp
+
